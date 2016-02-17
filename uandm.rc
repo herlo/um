@@ -1,0 +1,27 @@
+# skein configuration file
+# structured in INI style
+# use %% to allow code interpolation
+# use % to use config interpolation
+
+[DEFAULT]
+torrent = /home/herlo/Torrents
+
+[uandc]
+# intentionally left blank.
+# Used to interpolate defaults above when they don't get used in another category below
+
+[logger]
+file = /tmp/uandc.log
+format = %%(levelname)s %%(asctime)s %%(message)s
+dateformat = %%m/%%d/%%Y %%I:%%M:%%S %%p
+level = logging.DEBUG
+
+[path]
+torrent = /home/herlo/TestTorrents
+video = /home/herlo/TestVideos
+audio = /home/herlo/TestMusic
+exclude = %(torrent)s/.unrar_excludes
+
+[ext]
+video = avi,mp4,mkv
+audio = mp3,ogg,aac
