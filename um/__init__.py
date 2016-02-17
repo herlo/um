@@ -8,6 +8,7 @@ import stat
 import shutil
 import hashlib
 import logging
+import patoolib
 import argparse
 import subprocess
 import ConfigParser
@@ -58,12 +59,26 @@ class UandM():
             for k, v in config.items(section):
                 self.cfgs[section][k] = v
 
-    def extract(self, args):
-        """Grab useful information from a repository
+    def _in_excludes_file(self, filename):
+        """Return whether filename is in excludes file
 
-        :param str args.name: repository name
+        :param str filename: file to check
         """
         pass
+
+    def extract(self, args):
+        """Walk the dir `path.torrents`, find rar files, extract files.
+        Skip files found in the path.exclude file.
+        """
+        glob_cmp = '{0}/**/*.rar'.format(self.cfgs['path']['torrent'])
+        for filename in glob.iglob(glob_cmp):
+
+            if not self._in_excludes_file(filename):
+                self.logger.debug("extracting filename: {0}".format(filename))
+                patoolib.extract_archive(filename, 
+                                outdir=self.cfgs['path']['extract'],
+                                interactive=False)
+
 
     def move(self, args):
         """Grab useful information from a repository

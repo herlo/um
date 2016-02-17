@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 
-from um import UandC
+from um import UandM
 
 class SmartHelpFormatter(argparse.HelpFormatter):
 
@@ -15,7 +16,7 @@ class SmartHelpFormatter(argparse.HelpFormatter):
 
 def main():
 
-    uc = UandC(config_path='./uandc.rc')
+    um = UandM(config_path='./uandm.conf')
     p = argparse.ArgumentParser(
             description=u"Extract and copy torrents",
         )
@@ -25,14 +26,19 @@ def main():
     p.add_argument("-f", "--force", help="force extract and copy actions",
                     action="store_true")
 
-    p.set_defaults(func=uc.extract_and_copy)
 
     sp = p.add_subparsers()
 
-    p_ex = sp.add_parser("extract", help=u"extract rar files only",
+    p_ex = sp.add_parser("ex", help=u"extract rar files only",
                     formatter_class=SmartHelpFormatter)
-    p_cp = sp.add_parser("copy", help=u"copy extracted files only",
+    p_ex.add_argument("-f", "--force", help=u"force extract on all files, ignore any excluded files",
+                    action="store_true")
+    p_ex.set_defaults(func=um.extract)
+
+    p_mv = sp.add_parser("mv", help=u"copy extracted files only",
                     formatter_class=SmartHelpFormatter)
+    p_mv.set_defaults(func=um.move)
+
     p_rm = sp.add_parser("rm", help=u"remove torrents files only",
                     formatter_class=SmartHelpFormatter)
     p_rm.add_argument("t", help=u"remove torrents")
@@ -51,7 +57,10 @@ def main():
                     "Months (eg. 3m)\n"
                     "Years (eg. 1y)\n\n")
 
+    p_rm.set_defaults(func=um.remove)
+
     args = p.parse_args()
+    args.func(args)
 
     #excludes = um.get_excludes()
 
