@@ -8,10 +8,11 @@ import stat
 import shutil
 import hashlib
 import logging
-import patoolib
 import argparse
 import subprocess
 import ConfigParser
+
+from rarfile import RarFile
 
 
 class UandM():
@@ -64,20 +65,34 @@ class UandM():
 
         :param str filename: file to check
         """
-        pass
+        with open(self.cfgs['path']['excludes'], 'r') as f:
+            #self.logger.debug("filename: {0}".format(filename))
+            for line in f:
+                print('line: {0}'.format(line.strip('\n')))
+                self.logger.debug("exclude_file: {0}".format(line.strip('\n')))
+                return [True if line.strip('\n') == filename else False for line in f ]
 
     def extract(self, args):
         """Walk the dir `path.torrents`, find rar files, extract files.
         Skip files found in the path.exclude file.
         """
+        excludes = []
         glob_cmp = '{0}/**/*.rar'.format(self.cfgs['path']['torrent'])
         for filename in glob.iglob(glob_cmp):
-
             if not self._in_excludes_file(filename):
                 self.logger.debug("extracting filename: {0}".format(filename))
-                patoolib.extract_archive(filename, 
-                                outdir=self.cfgs['path']['extract'],
-                                interactive=False)
+                rar = RarFile(filename)
+                rar.extractall(path=self.cfgs['path']['extract'])
+                rar.close()
+                excludes.append(filename)
+
+        if len(excludes) > 0:
+            self.logger.debug('excludes: {0}'.format(excludes))
+            with open(self.cfgs['path']['excludes'], 'a') as f:
+                for e in excludes:
+                    f.write('{0}\n'.format(e))
+
+
 
 
     def move(self, args):
