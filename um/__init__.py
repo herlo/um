@@ -84,11 +84,11 @@ class UandM():
         glob_cmp = '{0}/**/*.rar'.format(self.cfgs['path']['torrents'])
         for filename in glob.iglob(glob_cmp):
             self.logger.debug("extracting filename: {0}".format(filename))
-            if not self._in_excludes_file(filename) or args.force:
+            if not self._in_excludes_file(os.path.basename(filename)) or args.force:
                 rar = RarFile(filename)
                 rar.extractall(path=self.cfgs['path']['extract'])
                 rar.close()
-                excludes.append(filename)
+                excludes.append(os.path.basename(filename))
 
         self._write_excludes(excludes)
         self.logger.info("END extracting files")
@@ -101,7 +101,7 @@ class UandM():
             self.logger.debug('writing excludes: {0}'.format(excludes))
             with open(self.cfgs['path']['excludes'], 'a') as f:
                 for e in excludes:
-                    if not self._in_excludes_file(e):
+                    if not self._in_excludes_file(os.path.basename(e)):
                         f.write('{0}\n'.format(e))
 
 
@@ -127,16 +127,15 @@ class UandM():
                     if fnmatch.fnmatch(basename, pattern):
                         filename = os.path.join(root, basename)
 
-                        if not self._in_excludes_file(filename) or args.force:
-                            self.logger.debug('copy filename: {0}'.format(filename))
+                        if not self._in_excludes_file(os.path.basename(filename)) or args.force:
 
                             try:
                                 dest = self.cfgs['path']['extract']
+                                self.logger.info("cp {0} -> {1}".format(filename, dest))
                                 shutil.copy(filename, dest)
                             except:
                                 pass
-
-                            excludes.append(filename)
+                            excludes.append(os.path.basename(filename))
 
         self._write_excludes(excludes)
         self.logger.info("END copying files")
@@ -179,7 +178,7 @@ class UandM():
                         dest = self.cfgs['path']['audio']
 
 
-                    self.logger.debug("mv {0} -> {1}".format(filename, dest))
+                    self.logger.info("mv {0} -> {1}".format(filename, dest))
                     shutil.move(filename, dest)
                 except:
                     self.logger.debug("FAILED to mv {0} -> {1}".format(filename, dest))
