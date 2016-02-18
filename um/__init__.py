@@ -162,30 +162,33 @@ class UandM():
         self.logger.info("START moving extracted files")
         dir_dict = {}
 
-        self.logger.debug('walking {0}'.format(self.cfgs['path']['extract']))
-        for d, dirs, files in os.walk(self.cfgs['path']['extract']):
-            if files:
-                dir_dict[d] = files
+        extensions = self.cfgs['ext']['video'] + ',' + self.cfgs['ext']['audio']
 
-        for key, item in dir_dict.items():
-            for x in item:
-                filename = os.path.join(key, x)
-                media_type = self._get_media_type(filename)
-                self.logger.debug("{0} is of type "
-                        "'{1}'".format(os.path.basename(os.path.expanduser(filename)),
-                        media_type))
-                try:
-                    if media_type == 'video':
-                        dest = self.cfgs['path']['video']
-                    elif media_type == 'audio':
-                        dest = self.cfgs['path']['audio']
+        for ext in extensions.split(','):
+            pattern = '*.{0}'.format(ext)
+            self.logger.debug('move pattern: {0}'.format(pattern))
+            for root, dirs, files in os.walk(
+                        '{0}/'.format(self.cfgs['path']['extract'])):
+                self.logger.debug('walking {0}'.format(self.cfgs['path']['extract']))
+                for basename in files:
+                    if fnmatch.fnmatch(basename, pattern):
+                        filename = os.path.join(root, basename)
 
+                        media_type = self._get_media_type(filename)
+                        self.logger.debug("{0} is of type "
+                                "'{1}'".format(os.path.basename(os.path.expanduser(filename)),
+                                media_type))
 
-                    self.logger.info("mv {0} -> {1}".format(filename, dest))
-                    shutil.move(filename, dest)
-                except:
-                    self.logger.debug("FAILED to mv {0} -> {1}".format(filename, dest))
-                    pass
+                        try:
+                            if media_type == 'video':
+                                dest = self.cfgs['path']['video']
+                            elif media_type == 'audio':
+                                dest = self.cfgs['path']['audio']
+
+                            self.logger.info("mv {0} -> {1}".format(filename, dest))
+                            shutil.move(filename, dest)
+                        except:
+                            self.logger.debug("FAILED to mv {0} -> {1}".format(filename, dest))
 
         self.logger.info("END moving extracted files")
 
