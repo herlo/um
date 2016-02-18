@@ -12,8 +12,8 @@ import logging
 import argparse
 import subprocess
 import ConfigParser
+import rarfile
 
-from rarfile import RarFile
 from pymdeco import services
 
 
@@ -86,11 +86,11 @@ class UandM():
             self.logger.debug("extracting filename: {0}".format(filename))
             if not self._in_excludes_file(os.path.basename(filename)) or args.force:
                 try:
-                    rar = RarFile(filename)
+                    rar = rarfile.RarFile(filename)
                     rar.extractall(path=self.cfgs['path']['extract'])
                     rar.close()
                     excludes.append(os.path.basename(filename))
-                except NeedFirstVolume as e:
+                except rarfile.NeedFirstVolume as e:
                     pass
 
         self._write_excludes(excludes)
