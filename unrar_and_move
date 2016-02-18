@@ -33,7 +33,7 @@ def main():
                     formatter_class=SmartHelpFormatter)
     p_ex.add_argument("-f", "--force", help=u"force extract on all files, ignore any excluded files",
                     action="store_true")
-    p_ex.set_defaults(func=um.extract)
+    p_ex.set_defaults(func=um.extract_and_copy)
 
     p_mv = sp.add_parser("mv", help=u"copy extracted files only",
                     formatter_class=SmartHelpFormatter)
