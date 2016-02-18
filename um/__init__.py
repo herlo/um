@@ -85,10 +85,13 @@ class UandM():
         for filename in glob.iglob(glob_cmp):
             self.logger.debug("extracting filename: {0}".format(filename))
             if not self._in_excludes_file(os.path.basename(filename)) or args.force:
-                rar = RarFile(filename)
-                rar.extractall(path=self.cfgs['path']['extract'])
-                rar.close()
-                excludes.append(os.path.basename(filename))
+                try:
+                    rar = RarFile(filename)
+                    rar.extractall(path=self.cfgs['path']['extract'])
+                    rar.close()
+                    excludes.append(os.path.basename(filename))
+                except NeedFirstVolume as e:
+                    pass
 
         self._write_excludes(excludes)
         self.logger.info("END extracting files")
