@@ -7,12 +7,14 @@ import glob
 import stat
 import shutil
 import hashlib
+import fnmatch
 import logging
 import argparse
 import subprocess
 import ConfigParser
 
 from rarfile import RarFile
+from pymdeco import services
 
 
 class UandM():
@@ -65,42 +67,125 @@ class UandM():
 
         :param str filename: file to check
         """
+        if '.unrar_excludes' in filename: return True
         with open(self.cfgs['path']['excludes'], 'r') as f:
-            #self.logger.debug("filename: {0}".format(filename))
             for line in f:
-                print('line: {0}'.format(line.strip('\n')))
-                self.logger.debug("exclude_file: {0}".format(line.strip('\n')))
-                return [True if line.strip('\n') == filename else False for line in f ]
+                if filename in line.strip('\n'):
+                    self.logger.debug("excluding file: {0}".format(line))
+                    return True
+        return False
 
     def extract(self, args):
         """Walk the dir `path.torrents`, find rar files, extract files.
         Skip files found in the path.exclude file.
         """
+        self.logger.info("START extracting files")
         excludes = []
-        glob_cmp = '{0}/**/*.rar'.format(self.cfgs['path']['torrent'])
+        glob_cmp = '{0}/**/*.rar'.format(self.cfgs['path']['torrents'])
         for filename in glob.iglob(glob_cmp):
-            if not self._in_excludes_file(filename):
-                self.logger.debug("extracting filename: {0}".format(filename))
+            self.logger.debug("extracting filename: {0}".format(filename))
+            if not self._in_excludes_file(filename) or args.force:
                 rar = RarFile(filename)
                 rar.extractall(path=self.cfgs['path']['extract'])
                 rar.close()
                 excludes.append(filename)
 
+        self._write_excludes(excludes)
+        self.logger.info("END extracting files")
+
+
+    def _write_excludes(self, excludes):
+        """Write out the excludes file
+        """
         if len(excludes) > 0:
-            self.logger.debug('excludes: {0}'.format(excludes))
+            self.logger.debug('writing excludes: {0}'.format(excludes))
             with open(self.cfgs['path']['excludes'], 'a') as f:
                 for e in excludes:
-                    f.write('{0}\n'.format(e))
+                    if not self._in_excludes_file(e):
+                        f.write('{0}\n'.format(e))
 
 
+    def copy(self, args):
+        """Copy media files from torrent path to extracted path
 
+        NOTE: This will only copy files that are not in the exclude list
+        unless of course, the force flag is in play.
+        """
+
+        self.logger.info("START copying files")
+        dir_dict = {}
+        excludes = []
+
+        extensions = self.cfgs['ext']['video'] + ',' + self.cfgs['ext']['audio']
+
+        for ext in extensions.split(','):
+            pattern = '*.{0}'.format(ext)
+            self.logger.debug('copy pattern: {0}'.format(pattern))
+            for root, dirs, files in os.walk(
+                        '{0}/'.format(self.cfgs['path']['torrents'])):
+                for basename in files:
+                    if fnmatch.fnmatch(basename, pattern):
+                        filename = os.path.join(root, basename)
+
+                        if not self._in_excludes_file(filename) or args.force:
+                            self.logger.debug('copy filename: {0}'.format(filename))
+
+                            try:
+                                dest = self.cfgs['path']['extract']
+                                shutil.copy(filename, dest)
+                            except:
+                                pass
+
+                            excludes.append(filename)
+
+        self._write_excludes(excludes)
+        self.logger.info("END copying files")
+
+
+    def extract_and_copy(self, args):
+        """Run the extract() and copy() methods back-to-back
+        """
+        self.extract(args)
+        self.copy(args)
+
+    def _get_media_type(self, filename):
+
+        srv = services.FileMetadataService()
+        meta = srv.get_metadata(filename)
+        return meta['file_type']
 
     def move(self, args):
-        """Grab useful information from a repository
-
-        :param str args.name: repository name
+        """Move files from extracted path to media paths
         """
-        pass
+        self.logger.info("START moving extracted files")
+        dir_dict = {}
+
+        self.logger.debug('walking {0}'.format(self.cfgs['path']['extract']))
+        for d, dirs, files in os.walk(self.cfgs['path']['extract']):
+            if files:
+                dir_dict[d] = files
+
+        for key, item in dir_dict.items():
+            for x in item:
+                filename = os.path.join(key, x)
+                media_type = self._get_media_type(filename)
+                self.logger.debug("{0} is of type "
+                        "'{1}'".format(os.path.basename(os.path.expanduser(filename)),
+                        media_type))
+                try:
+                    if media_type == 'video':
+                        dest = self.cfgs['path']['video']
+                    elif media_type == 'audio':
+                        dest = self.cfgs['path']['audio']
+
+
+                    self.logger.debug("mv {0} -> {1}".format(filename, dest))
+                    shutil.move(filename, dest)
+                except:
+                    self.logger.debug("FAILED to mv {0} -> {1}".format(filename, dest))
+                    pass
+
+        self.logger.info("END moving extracted files")
 
     def remove(self, args):
         """Grab useful information from a repository
